@@ -1,0 +1,651 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Pause Before Sharing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: one calm column, tab strip on top, cards only where the person acts. */
+:root {
+  --bg: #EDF1EF;
+  --surface: #F8FAF9;
+  --fg: #142427;
+  --muted: #51666A;
+  --line: #CBD6D3;
+  --accent: #1D5C58;
+  --accent-fg: #F4FBFA;
+  --warn: #8A5510;
+  --warn-bg: #F6E8CF;
+  --bad: #9E3A3D;
+  --bad-bg: #F3DCDC;
+  --good: #1F6B40;
+  --good-bg: #D8EBDD;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Public Sans", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0F1A1C; --surface: #162427; --fg: #E2EDEB; --muted: #9BB2B0; --line: #2B3E41;
+    --accent: #6EC3B8; --accent-fg: #0B1819; --warn: #E3B160; --warn-bg: #352A14;
+    --bad: #E58A8C; --bad-bg: #3A1F21; --good: #7FD1A0; --good-bg: #17301F;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0F1A1C; --surface: #162427; --fg: #E2EDEB; --muted: #9BB2B0; --line: #2B3E41;
+  --accent: #6EC3B8; --accent-fg: #0B1819; --warn: #E3B160; --warn-bg: #352A14;
+  --bad: #E58A8C; --bad-bg: #3A1F21; --good: #7FD1A0; --good-bg: #17301F;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-inline: 16px; padding-block: 20px 100px;
+}
+.wrap { max-width: 720px; margin-inline: auto; display: flex; flex-direction: column; gap: 20px; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(1.9rem, 6vw, 2.6rem); letter-spacing: -0.01em; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.05rem; }
+p { margin: 0; }
+.lede { color: var(--muted); max-width: 60ch; }
+.triple { display: flex; flex-wrap: wrap; gap: 8px 18px; font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; }
+.triple span { color: var(--accent); }
+header { display: flex; flex-direction: column; gap: 10px; }
+
+nav {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 5; display: flex;
+  background: var(--surface); border-top: 1px solid var(--line);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+nav button {
+  flex: 1 1 0; min-width: 0; min-height: 58px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  background: none; border: 0; color: var(--muted); font: 600 0.72rem var(--font-body); padding: 6px 2px; cursor: pointer;
+}
+nav button svg { width: 24px; height: 24px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+nav button[aria-selected="true"] { color: var(--accent); }
+button, label, select { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.card, .held { scroll-margin-top: 12px; }
+
+section.panel { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.field { display: flex; flex-direction: column; gap: 6px; min-width: 0; flex: 1 1 200px; }
+label, .label { font-weight: 600; font-size: 0.9rem; }
+textarea, input[type="text"], select {
+  width: 100%; font: inherit; color: var(--fg); background: var(--bg);
+  border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px;
+}
+textarea { min-height: 110px; resize: vertical; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+button.btn {
+  font: 600 0.95rem var(--font-body); border-radius: 8px; padding: 10px 16px; cursor: pointer;
+  border: 1px solid var(--accent); background: var(--accent); color: var(--accent-fg);
+}
+button.btn.ghost { background: transparent; color: var(--accent); }
+button.btn.danger { border-color: var(--bad); color: var(--bad); background: transparent; }
+button.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+button.link { background: none; border: 0; color: var(--muted); font: 500 0.85rem var(--font-body); text-decoration: underline; cursor: pointer; padding: 4px; }
+
+.pill { display: inline-block; font-size: 0.75rem; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; padding: 2px 8px; border-radius: 999px; background: var(--bg); border: 1px solid var(--line); color: var(--muted); }
+.pill.warn { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.pill.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+
+.held { border: 1px solid var(--line); border-left: 4px solid var(--warn); border-radius: 10px; background: var(--surface); padding: 16px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.held.ready { border-left-color: var(--good); }
+.held .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.timer { color: var(--warn); font-weight: 600; font-variant-numeric: tabular-nums; }
+fieldset { border: 0; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+legend { font-weight: 600; padding: 0; margin-bottom: 6px; }
+.check { display: flex; gap: 10px; align-items: flex-start; font-weight: 400; font-size: 0.95rem; }
+.check input { margin-top: 4px; width: 18px; height: 18px; flex: 0 0 auto; accent-color: var(--accent); }
+.empty { color: var(--muted); padding: 8px 2px; }
+
+.circle { border-top: 1px solid var(--line); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
+.circle:first-child { border-top: 0; padding-top: 0; }
+.circle .head { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; justify-content: space-between; }
+.circle .hear { color: var(--muted); font-size: 0.92rem; }
+.person { display: flex; flex-direction: column; gap: 8px; background: var(--bg); border-radius: 8px; padding: 10px 12px; }
+.person .top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.person .checks { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.person select { width: auto; padding: 6px 8px; font-size: 0.85rem; }
+.hint { font-size: 0.85rem; color: var(--good); font-weight: 600; }
+
+.hear-opts { display: flex; flex-direction: column; gap: 8px; }
+.hear-result { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+.hear-result div { border-radius: 8px; padding: 10px 12px; font-size: 0.9rem; border: 1px solid var(--line); }
+.hear-result .yes { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.hear-result .no { color: var(--muted); text-decoration: line-through; }
+.note { padding: 12px 14px; border-radius: 8px; background: var(--warn-bg); color: var(--warn); font-weight: 500; }
+
+.verdict { border-radius: 10px; padding: 14px 16px; font-weight: 600; background: var(--bg); border: 1px solid var(--line); }
+.verdict.good { background: var(--good-bg); color: var(--good); border-color: transparent; }
+.verdict.mid { background: var(--warn-bg); color: var(--warn); border-color: transparent; }
+.verdict.bad { background: var(--bad-bg); color: var(--bad); border-color: transparent; }
+ul.plain { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+
+.entry { border-bottom: 1px solid var(--line); padding-block: 14px; display: flex; flex-direction: column; gap: 8px; }
+.entry:last-child { border-bottom: 0; }
+.entry .text { white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry .meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; color: var(--muted); font-size: 0.85rem; }
+
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 2px; }
+.stat b { font-family: var(--font-display); font-size: 2rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 0.85rem; }
+.dots { display: flex; gap: 6px; flex-wrap: wrap; }
+.dot { width: 22px; height: 22px; border-radius: 6px; background: var(--line); }
+.dot.held { background: var(--good); border: 0; padding: 0; }
+.dot.slip { background: var(--bad); }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 16px; color: var(--muted); font-size: 0.85rem; }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 6px; vertical-align: -1px; }
+
+footer { color: var(--muted); font-size: 0.85rem; }
+#toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(78px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); background: var(--fg); color: var(--bg); padding: 12px 18px; border-radius: 10px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.2s; z-index: 10; }
+#toast.on { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { #toast { transition: none; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>Pause Before Sharing</h1>
+    <div class="triple" aria-label="Three questions"><span>Is it true?</span><span>Is it kind?</span><span>Is it needed?</span></div>
+    <p class="lede">A private place to hold your words for a while, choose who may hear them, and check what you hear before you believe it. Everything stays in this browser.</p>
+  </header>
+
+  <nav role="tablist" aria-label="Sections">
+    <button role="tab" id="t-pause" data-tab="pause" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg>Pause</button>
+    <button role="tab" id="t-circles" data-tab="circles" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/></svg>Circles</button>
+    <button role="tab" id="t-believe" data-tab="believe" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12l5 5 9-10"/></svg>Check</button>
+    <button role="tab" id="t-journal" data-tab="journal" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 4h12v16H6z M9 9h6 M9 13h6"/></svg>Journal</button>
+    <button role="tab" id="t-progress" data-tab="progress" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19v-6M12 19V5M19 19v-9"/></svg>Progress</button>
+  </nav>
+
+  <section class="panel" id="tab-pause">
+    <form class="card" id="pauseForm">
+      <h2>Write it here first</h2>
+      <p class="lede">Feeling the urge to complain, post or tell someone? Put it here instead. Come back when the time is up.</p>
+      <div class="field">
+        <label for="pauseText">What do you want to say?</label>
+        <textarea id="pauseText" placeholder="Write it exactly as it feels. Nobody sees this."></textarea>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="pauseDest">Where were you going to say it?</label>
+          <select id="pauseDest">
+            <option>Social media</option>
+            <option>A WhatsApp group</option>
+            <option>A friend</option>
+            <option>A colleague</option>
+            <option>The person it is about</option>
+            <option>Somewhere else</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="pauseHold">Hold it for</label>
+          <select id="pauseHold">
+            <option value="1440">24 hours</option>
+            <option value="360">6 hours</option>
+            <option value="60">1 hour</option>
+          </select>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn" type="submit" id="holdBtn">Hold it</button>
+        <button class="btn ghost" type="button" id="toJournalBtn">Keep it in my journal instead</button>
+      </div>
+    </form>
+    <div>
+      <h2>Waiting</h2>
+    </div>
+    <div id="heldList" style="display:flex;flex-direction:column;gap:14px"></div>
+  </section>
+
+  <section class="panel" id="tab-circles" hidden>
+    <div class="card">
+      <h2>Who can hear this?</h2>
+      <fieldset class="hear-opts">
+        <legend class="label">What is it about?</legend>
+        <label class="check" for="s1"><input type="radio" name="sens" id="s1" value="light">An everyday, light thing</label>
+        <label class="check" for="s2"><input type="radio" name="sens" id="s2" value="personal">A personal feeling or problem</label>
+        <label class="check" for="s3"><input type="radio" name="sens" id="s3" value="painful">Something painful or very private</label>
+        <label class="check" for="s4"><input type="radio" name="sens" id="s4" value="other">A complaint about another person</label>
+      </fieldset>
+      <div id="hearResult" aria-live="polite"><p class="empty">Pick one to see who it is safe to tell.</p></div>
+    </div>
+
+    <div class="card">
+      <h2>Your circles</h2>
+      <p class="lede">Trust is earned in small steps. Move someone closer only after they pass all three checks.</p>
+      <div id="circles" style="display:flex;flex-direction:column;gap:14px"></div>
+      <form class="row" id="personForm" style="align-items:flex-end">
+        <div class="field">
+          <label for="personName">Add a person</label>
+          <input type="text" id="personName" placeholder="Name" autocomplete="off">
+        </div>
+        <div class="field" style="flex-basis:150px">
+          <label for="personCircle">Circle</label>
+          <select id="personCircle">
+            <option value="acq">Acquaintances</option>
+            <option value="trusted">Trusted</option>
+            <option value="inner">Inner circle</option>
+          </select>
+        </div>
+        <button class="btn" type="submit">Add</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-believe" hidden>
+    <div class="card">
+      <h2>Check a story before you believe it</h2>
+      <p class="lede">You have heard one side. Tick what applies.</p>
+      <div class="field">
+        <label for="heard">What did you hear? (optional)</label>
+        <textarea id="heard" style="min-height:80px" placeholder="For example: Someone told me that ... said bad things about me."></textarea>
+      </div>
+      <fieldset>
+        <legend>About the person who told you</legend>
+        <label class="check" for="q1"><input type="checkbox" id="q1" data-w="2">They saw or heard it themselves</label>
+        <label class="check" for="q2"><input type="checkbox" id="q2" data-w="2">I have heard the other side too</label>
+        <label class="check" for="q3"><input type="checkbox" id="q3" data-w="1">I can check it with a message, a document or a second person</label>
+        <label class="check" for="q4"><input type="checkbox" id="q4" data-w="-2">They gain something if I believe it</label>
+        <label class="check" for="q5"><input type="checkbox" id="q5" data-w="-2">They often exaggerate or gossip</label>
+        <label class="check" for="q6"><input type="checkbox" id="q6" data-w="-2">They want me to act, pay, share it or turn against someone</label>
+      </fieldset>
+      <div class="verdict" id="verdict" aria-live="polite">Tick what applies to see an answer.</div>
+      <div class="row">
+        <button class="btn ghost" type="button" id="heardToJournal">Save to journal</button>
+      </div>
+    </div>
+    <div class="card">
+      <h3>Questions to ask them, calmly</h3>
+      <ul class="plain">
+        <li>How do you know this?</li>
+        <li>Did you see or hear it yourself?</li>
+        <li>What does the other person say?</li>
+        <li>Why are you telling me?</li>
+        <li>Can we wait a day before I decide anything?</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-journal" hidden>
+    <form class="card" id="journalForm">
+      <h2>Private journal</h2>
+      <p class="lede">Say it here, or in prayer, before you say it to anyone else. Only this browser holds it.</p>
+      <div class="field">
+        <label for="jText">What is on your mind?</label>
+        <textarea id="jText" placeholder="Write freely. Name names if you need to. It stays here."></textarea>
+      </div>
+      <div class="row">
+        <div class="field" style="flex-basis:160px">
+          <label for="jMood">It feels</label>
+          <select id="jMood">
+            <option>Angry</option><option>Hurt</option><option>Worried</option><option>Unfair</option><option>Happy</option><option>Mixed</option>
+          </select>
+        </div>
+        <button class="btn" type="submit" style="align-self:flex-end">Save privately</button>
+      </div>
+    </form>
+    <div class="card" id="journalCard">
+      <h3>Earlier entries</h3>
+      <div id="journalList"></div>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-progress" hidden>
+    <div class="stats" id="stats"></div>
+    <div class="card">
+      <h2>Today</h2>
+      <p class="lede">At the end of the day, be honest with yourself. A slip is information, not failure.</p>
+      <div class="row">
+        <button class="btn" type="button" id="heldBtn">I held it back today</button>
+        <button class="btn ghost" type="button" id="slipBtn">I overshared today</button>
+      </div>
+      <div class="dots" id="dots" aria-label="Last 14 days"></div>
+      <div class="legend"><span><i style="background:var(--good)"></i>Held back</span><span><i style="background:var(--bad)"></i>Overshared</span><span><i style="background:var(--line)"></i>No check-in</span></div>
+    </div>
+    <div class="card">
+      <h3>Rebuilding respect</h3>
+      <ul class="plain">
+        <li>Keep what people tell you private, every time.</li>
+        <li>Speak well of people who are not in the room.</li>
+        <li>Share less, and let people see the change over months.</li>
+        <li>If you hurt one person badly, give one short, sincere apology.</li>
+        <li>Stay warm, but choose carefully who gets your trust.</li>
+      </ul>
+    </div>
+    <div class="row"><button class="btn danger" type="button" id="resetBtn">Erase everything on this page</button></div>
+  </section>
+
+  <footer>Data is saved only in this browser on this device. Clearing site data removes it.</footer>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+(function () {
+  var KEY = 'pause-before-sharing-v1';
+  var $ = function (id) { return document.getElementById(id); };
+  var uid = function () { return Math.random().toString(36).slice(2, 9); };
+  var CIRCLES = [
+    { id: 'inner', name: 'Inner circle', size: '1 or 2 people', hear: 'Real worries, feelings and problems.' },
+    { id: 'trusted', name: 'Trusted', size: 'A few people', hear: 'Plans, work news, mild frustration without blaming anyone by name.' },
+    { id: 'acq', name: 'Acquaintances', size: 'Many people', hear: 'Light, neutral things: food, weather, tasks, news.' },
+    { id: 'public', name: 'Public and social media', size: 'Everyone, for ever', hear: 'Nothing personal. Nothing about other people.' }
+  ];
+  var CHECKS = [
+    'It is true, and I have checked it.',
+    'It is kind, or at least fair.',
+    'It is needed. Staying silent would cost something real.',
+    'I would be fine if the person it is about read it.',
+    'I would be fine if my family and a future employer read it.'
+  ];
+  var TRUST = ['Keeps secrets', 'No gossip', 'Same face to face'];
+
+  function seed() {
+    var now = Date.now();
+    return {
+      held: [{ id: uid(), text: 'Example: I want to post about how unfair a coworker was to me today.', dest: 'Social media', created: now - 86400000, readyAt: now - 1000, checks: [false, false, false, false, false], example: true }],
+      people: [
+        { id: uid(), name: 'Example: close family member', circle: 'inner', t: [true, true, true], example: true },
+        { id: uid(), name: 'Example: new colleague', circle: 'acq', t: [true, false, false], example: true }
+      ],
+      journal: [],
+      log: {}
+    };
+  }
+  function load() {
+    try {
+      var r = localStorage.getItem(KEY);
+      if (r) { var s = JSON.parse(r); if (s && s.held && s.people && s.journal && s.log) return s; }
+    } catch (e) {}
+    return seed();
+  }
+  var state = load();
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  function h(tag, attrs) {
+    var e = document.createElement(tag);
+    attrs = attrs || {};
+    Object.keys(attrs).forEach(function (k) {
+      var v = attrs[k];
+      if (k === 'class') e.className = v;
+      else if (k.indexOf('on') === 0) e.addEventListener(k.slice(2), v);
+      else if (v === true) e.setAttribute(k, '');
+      else if (v !== false && v != null) e.setAttribute(k, v);
+    });
+    for (var i = 2; i < arguments.length; i++) {
+      var c = arguments[i];
+      if (c == null) continue;
+      (Array.isArray(c) ? c : [c]).forEach(function (x) { e.append(x); });
+    }
+    return e;
+  }
+  var toastTimer;
+  function toast(msg) {
+    var t = $('toast'); t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastTimer); toastTimer = setTimeout(function () { t.classList.remove('on'); }, 3200);
+  }
+  function dayKey(d) {
+    var m = d.getMonth() + 1, day = d.getDate();
+    return d.getFullYear() + '-' + (m < 10 ? '0' : '') + m + '-' + (day < 10 ? '0' : '') + day;
+  }
+  function bump(field) {
+    var k = dayKey(new Date());
+    var e = state.log[k] || { h: 0, s: 0 };
+    e[field] += 1; state.log[k] = e;
+  }
+  function remain(ms) {
+    var m = Math.ceil(ms / 60000), hh = Math.floor(m / 60), mm = m % 60;
+    return hh ? hh + ' h ' + mm + ' min' : mm + ' min';
+  }
+
+  /* Tabs */
+  var tabs = document.querySelectorAll('nav [data-tab]');
+  tabs.forEach(function (b) {
+    b.addEventListener('click', function () {
+      tabs.forEach(function (x) {
+        var on = x === b;
+        x.setAttribute('aria-selected', on ? 'true' : 'false');
+        $('tab-' + x.dataset.tab).hidden = !on;
+      });
+      if (b.dataset.tab === 'progress') renderProgress();
+    });
+  });
+
+  /* Pause */
+  $('pauseForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var text = $('pauseText').value.trim();
+    if (!text) { toast('Write what you want to say first.'); return; }
+    var mins = parseInt($('pauseHold').value, 10);
+    var now = Date.now();
+    state.held.unshift({ id: uid(), text: text, dest: $('pauseDest').value, created: now, readyAt: now + mins * 60000, checks: [false, false, false, false, false] });
+    $('pauseText').value = '';
+    save(); renderHeld();
+    toast('Held. Come back when the time is up.');
+  });
+  $('toJournalBtn').addEventListener('click', function () {
+    var text = $('pauseText').value.trim();
+    if (!text) { toast('Write something first.'); return; }
+    addJournal(text, 'Mixed'); bump('h');
+    $('pauseText').value = '';
+    save(); renderJournal(); toast('Kept privately. That counts as holding it back.');
+  });
+  function removeHeld(id) { state.held = state.held.filter(function (x) { return x.id !== id; }); }
+
+  function renderHeld() {
+    var box = $('heldList'); box.replaceChildren();
+    if (!state.held.length) {
+      box.append(h('p', { class: 'empty' }, 'Nothing is waiting. When you feel like complaining or posting, write it above first.'));
+      return;
+    }
+    state.held.forEach(function (it) {
+      var ready = Date.now() >= it.readyAt;
+      var card = h('article', { class: 'held' + (ready ? ' ready' : '') });
+      var top = h('div', { class: 'row' },
+        h('span', { class: 'pill' }, 'For: ' + it.dest),
+        it.example ? h('span', { class: 'pill warn' }, 'Example') : null,
+        ready ? h('span', { class: 'pill good' }, 'Ready to review') : null);
+      card.append(top, h('p', { class: 'text' }, it.text));
+      if (!ready) {
+        card.append(
+          h('p', { class: 'timer' }, 'Ready to review in ', h('span', { 'data-ready': it.readyAt }, remain(it.readyAt - Date.now()))),
+          h('div', { class: 'row' }, h('button', { class: 'btn ghost', type: 'button', onclick: function () { letGo(it.id); } }, 'Let it go')));
+      } else {
+        var share = h('button', { class: 'btn', type: 'button', disabled: !it.checks.every(Boolean), onclick: function () {
+          removeHeld(it.id); save(); renderHeld(); toast('Say it calmly, once, to the right person.');
+        } }, 'I still want to share it');
+        var fs = h('fieldset', null, h('legend', null, 'All five must be true before you share'));
+        CHECKS.forEach(function (label, i) {
+          var cid = 'c-' + it.id + '-' + i;
+          fs.append(h('label', { class: 'check', for: cid },
+            h('input', { type: 'checkbox', id: cid, checked: !!it.checks[i], onchange: function (e) {
+              it.checks[i] = e.target.checked; save(); share.disabled = !it.checks.every(Boolean);
+            } }), label));
+        });
+        card.append(fs, h('div', { class: 'row' }, share,
+          h('button', { class: 'btn ghost', type: 'button', onclick: function () { letGo(it.id); } }, 'Let it go'),
+          h('button', { class: 'btn ghost', type: 'button', onclick: function () {
+            addJournal(it.text, 'Mixed'); bump('h'); removeHeld(it.id); save(); renderHeld(); renderJournal(); toast('Moved to your journal.');
+          } }, 'Move to journal')));
+      }
+      box.append(card);
+    });
+  }
+  function letGo(id) {
+    removeHeld(id); bump('h'); save(); renderHeld(); renderProgress();
+    toast('Good. You held it back.');
+  }
+  setInterval(function () {
+    var flip = false;
+    document.querySelectorAll('[data-ready]').forEach(function (sp) {
+      var t = +sp.dataset.ready - Date.now();
+      if (t <= 0) flip = true; else sp.textContent = remain(t);
+    });
+    if (flip) renderHeld();
+  }, 20000);
+
+  /* Circles */
+  var HEAR = {
+    light: { ok: ['inner', 'trusted', 'acq', 'public'] },
+    personal: { ok: ['inner', 'trusted'] },
+    painful: { ok: ['inner'] },
+    other: { ok: [], msg: 'Tell only the person, calmly, or a mentor who can really help. None of your circles. Write it in your journal first.' }
+  };
+  document.querySelectorAll('input[name="sens"]').forEach(function (r) {
+    r.addEventListener('change', function () {
+      var cfg = HEAR[r.value], out = $('hearResult'); out.replaceChildren();
+      if (cfg.msg) { out.append(h('p', { class: 'note' }, cfg.msg)); return; }
+      var grid = h('div', { class: 'hear-result' });
+      CIRCLES.forEach(function (c) {
+        var yes = cfg.ok.indexOf(c.id) > -1;
+        grid.append(h('div', { class: yes ? 'yes' : 'no' }, (yes ? 'Can hear: ' : '') + c.name));
+      });
+      out.append(grid);
+      if (r.value === 'painful') out.append(h('p', { class: 'lede', style: 'margin-top:10px' }, 'If nobody is safe yet, write it in your journal.'));
+    });
+  });
+  function renderCircles() {
+    var box = $('circles'); box.replaceChildren();
+    CIRCLES.forEach(function (c) {
+      var sec = h('div', { class: 'circle' },
+        h('div', { class: 'head' }, h('h3', null, c.name), h('span', { class: 'pill' }, c.size)),
+        h('p', { class: 'hear' }, 'Can hear: ' + c.hear));
+      if (c.id !== 'public') {
+        var list = state.people.filter(function (p) { return p.circle === c.id; });
+        if (!list.length) sec.append(h('p', { class: 'empty' }, 'Nobody here yet.'));
+        list.forEach(function (p) {
+          var all = p.t.every(Boolean);
+          var checks = h('div', { class: 'checks' });
+          TRUST.forEach(function (label, i) {
+            var cid = 'p-' + p.id + '-' + i;
+            checks.append(h('label', { class: 'check', for: cid, style: 'font-size:0.85rem' },
+              h('input', { type: 'checkbox', id: cid, checked: !!p.t[i], onchange: function (e) { p.t[i] = e.target.checked; save(); renderCircles(); } }), label));
+          });
+          var mv = h('select', { id: 'mv-' + p.id, 'aria-label': 'Move ' + p.name, onchange: function (e) { p.circle = e.target.value; save(); renderCircles(); } });
+          CIRCLES.filter(function (x) { return x.id !== 'public'; }).forEach(function (x) {
+            mv.append(h('option', { value: x.id, selected: x.id === p.circle }, x.name));
+          });
+          sec.append(h('div', { class: 'person' },
+            h('div', { class: 'top' },
+              h('strong', null, p.name),
+              h('span', { class: 'row' }, mv, h('button', { class: 'link', type: 'button', onclick: function () {
+                state.people = state.people.filter(function (x) { return x.id !== p.id; }); save(); renderCircles();
+              } }, 'Remove'))),
+            checks,
+            all && p.circle !== 'inner' ? h('span', { class: 'hint' }, 'Passed all three. You could move this person closer.') : null));
+        });
+      }
+      box.append(sec);
+    });
+  }
+  $('personForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var name = $('personName').value.trim();
+    if (!name) { toast('Type a name first.'); return; }
+    state.people.push({ id: uid(), name: name, circle: $('personCircle').value, t: [false, false, false] });
+    $('personName').value = ''; save(); renderCircles();
+  });
+
+  /* Check a story */
+  var qs = ['q1', 'q2', 'q3', 'q4', 'q5', 'q6'];
+  var lastVerdict = '';
+  function updateVerdict() {
+    var any = false, score = 0, push = false;
+    qs.forEach(function (id) {
+      var el = $(id);
+      if (el.checked) { any = true; score += parseInt(el.dataset.w, 10); if (id === 'q6') push = true; }
+    });
+    var v = $('verdict'); v.className = 'verdict';
+    if (!any) { v.textContent = 'Tick what applies to see an answer.'; lastVerdict = ''; return; }
+    var msg;
+    if (score >= 4) { v.classList.add('good'); msg = 'Likely reliable. Still check before you act or repeat it.'; }
+    else if (score >= 1) { v.classList.add('mid'); msg = 'Not clear yet. Ask questions and wait a day.'; }
+    else { v.classList.add('bad'); msg = 'Do not believe it or repeat it yet.'; }
+    if (push) msg += ' Anyone who rushes you is a warning sign.';
+    v.textContent = msg; lastVerdict = msg;
+  }
+  qs.forEach(function (id) { $(id).addEventListener('change', updateVerdict); });
+  $('heardToJournal').addEventListener('click', function () {
+    var t = $('heard').value.trim();
+    if (!t) { toast('Write what you heard first.'); return; }
+    addJournal('Heard: ' + t + (lastVerdict ? '\nCheck result: ' + lastVerdict : ''), 'Mixed');
+    save(); renderJournal(); toast('Saved to your journal.');
+  });
+
+  /* Journal */
+  function addJournal(text, mood) { state.journal.unshift({ id: uid(), text: text, mood: mood, at: Date.now() }); }
+  $('journalForm').addEventListener('submit', function (ev) {
+    ev.preventDefault();
+    var t = $('jText').value.trim();
+    if (!t) { toast('Write something first.'); return; }
+    addJournal(t, $('jMood').value); bump('h');
+    $('jText').value = ''; save(); renderJournal(); toast('Saved privately.');
+  });
+  function renderJournal() {
+    var box = $('journalList'); box.replaceChildren();
+    if (!state.journal.length) { box.append(h('p', { class: 'empty' }, 'No entries yet. Your first one will appear here.')); return; }
+    state.journal.forEach(function (e) {
+      box.append(h('div', { class: 'entry' },
+        h('div', { class: 'meta' }, h('span', { class: 'pill' }, e.mood), new Date(e.at).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' }),
+          h('button', { class: 'link', type: 'button', onclick: function () {
+            state.journal = state.journal.filter(function (x) { return x.id !== e.id; }); save(); renderJournal();
+          } }, 'Delete')),
+        h('p', { class: 'text' }, e.text)));
+    });
+  }
+
+  /* Progress */
+  function streak() {
+    var cur = new Date();
+    if (!state.log[dayKey(cur)]) cur.setDate(cur.getDate() - 1);
+    var n = 0;
+    while (true) {
+      var e = state.log[dayKey(cur)];
+      if (!e || e.s > 0) break;
+      n++; cur.setDate(cur.getDate() - 1);
+    }
+    return n;
+  }
+  function renderProgress() {
+    var held = 0, slip = 0;
+    Object.keys(state.log).forEach(function (k) { held += state.log[k].h; slip += state.log[k].s; });
+    var st = $('stats'); st.replaceChildren();
+    [[streak(), 'Day streak'], [held, 'Times held back'], [slip, 'Times overshared']].forEach(function (a) {
+      st.append(h('div', { class: 'stat' }, h('b', null, String(a[0])), h('span', null, a[1])));
+    });
+    var dots = $('dots'); dots.replaceChildren();
+    for (var i = 13; i >= 0; i--) {
+      var d = new Date(); d.setDate(d.getDate() - i);
+      var e = state.log[dayKey(d)];
+      var cls = 'dot' + (e ? (e.s > 0 ? ' slip' : (e.h > 0 ? ' held' : '')) : '');
+      dots.append(h('div', { class: cls, title: d.toLocaleDateString([], { dateStyle: 'medium' }) }));
+    }
+  }
+  $('heldBtn').addEventListener('click', function () { bump('h'); save(); renderProgress(); toast('Noted. Well done.'); });
+  $('slipBtn').addEventListener('click', function () {
+    bump('s'); save(); renderProgress();
+    toast('Noted. Write what triggered it in your journal.');
+  });
+  var resetArmed = false, resetTimer;
+  $('resetBtn').addEventListener('click', function () {
+    var b = $('resetBtn');
+    if (!resetArmed) {
+      resetArmed = true; b.textContent = 'Tap again to erase everything';
+      resetTimer = setTimeout(function () { resetArmed = false; b.textContent = 'Erase everything on this page'; }, 4000);
+      return;
+    }
+    clearTimeout(resetTimer); resetArmed = false; b.textContent = 'Erase everything on this page';
+    state = { held: [], people: [], journal: [], log: {} };
+    save(); renderAll(); toast('Everything erased.');
+  });
+
+  function renderAll() { renderHeld(); renderCircles(); renderJournal(); renderProgress(); }
+  renderAll();
+})();
+</script>
+
+</body></html>
